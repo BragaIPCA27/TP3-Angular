@@ -36,11 +36,13 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+/.claude
 
 # Environment / secrets
 server/.env
 .env
 *.env
+.env.example
 
 # System files
 .DS_Store
