@@ -1,6 +1,36 @@
 # Portfolio Pulse
 
-Aplicação Angular 17 standalone para monitorização de carteira de ações com carregamento de JSON, cotações em tempo real via Finnhub, total automático, gráfico live, trading fictício e persistência em MongoDB com fallback local.
+Aplicação de trading fictício construída com Angular 17 standalone e uma API Express/MongoDB. Permite gerir uma carteira de ações com autenticação de utilizadores, cotações em tempo real via Finnhub, gráficos interativos e análise de portfólio.
+
+## Funcionalidades
+
+- Autenticação (registo, login, logout) com JWT
+- Dashboard com KPIs: valor total, valor carteira, resultado, P&L diário, saldo disponível
+- Compra e venda de ações com slippage simulado
+- Ordens limitadas, stop-loss e trailing stop
+- Screener com filtros por setor, preço, variação e watchlist
+- AI Insights com sugestões de compra/venda/manter
+- Gráficos de candlestick com SMA/EMA via ApexCharts
+- Watchlist e alertas de preço
+- Análise detalhada: saúde da carteira, diversificação, taxa de acerto, CAGR, volatilidade
+- Notícias do mercado e por ação via Finnhub
+- Dados persistidos por utilizador no MongoDB
+
+## Tecnologias
+
+| Camada | Stack |
+|---|---|
+| Frontend | Angular 17, Tailwind CSS, Bootstrap Icons, ApexCharts |
+| Backend | Node.js, Express |
+| Base de dados | MongoDB via Mongoose |
+| Auth | JWT (jsonwebtoken) + bcryptjs |
+| Cotações | Finnhub API + Yahoo Finance (candles) |
+
+## Pré-requisitos
+
+- Node.js 18+
+- MongoDB local ou conta MongoDB Atlas
+- Chave API gratuita do [Finnhub](https://finnhub.io)
 
 ## Instalação
 
@@ -8,27 +38,30 @@ Aplicação Angular 17 standalone para monitorização de carteira de ações co
 npm install
 ```
 
-Se estiver a montar o projeto manualmente a partir de um diretório vazio, os pacotes relevantes são:
+## Configuração
 
-```bash
-npm install bootstrap bootstrap-icons express mongoose cors dotenv concurrently
+### 1. Variáveis de ambiente do servidor
+
+Crie o ficheiro `server/.env`:
+
+```env
+PORT=3000
+MONGODB_URI=mongodb://127.0.0.1:27017/portfolio-dashboard
+MONGODB_DB=portfolio-dashboard
+FINNHUB_API_KEY=a_sua_chave_finnhub
+JWT_SECRET=uma_string_secreta_longa
 ```
 
-## Configurar a API Key
+### 2. API Key no frontend
 
-Edite [src/environments/environment.ts](src/environments/environment.ts) e substitua `YOUR_API_KEY` pela sua chave Finnhub.
+Edite [src/environments/environment.ts](src/environments/environment.ts) e substitua `YOUR_API_KEY` pela sua chave Finnhub:
 
-Endpoint usado:
-
-```text
-https://finnhub.io/api/v1/quote?symbol=AAPL&token=YOUR_API_KEY
+```ts
+export const environment = {
+  finnhubApiKey: 'a_sua_chave_finnhub',
+  ...
+};
 ```
-
-## Configurar MongoDB
-
-1. Crie o ficheiro [server/.env](server/.env) a partir de [server/.env.example](server/.env.example) se quiser alterar os valores.
-2. Ajuste `MONGODB_URI` para a sua instância MongoDB local ou Atlas.
-3. O servidor usa por defeito `mongodb://127.0.0.1:27017/portfolio-dashboard`.
 
 ## Correr o projeto
 
@@ -36,9 +69,9 @@ https://finnhub.io/api/v1/quote?symbol=AAPL&token=YOUR_API_KEY
 npm start
 ```
 
-Este comando arranca o frontend Angular e a API Express/MongoDB em simultâneo.
+Inicia o servidor Express (porta 3000) e o frontend Angular (porta 4200) em simultâneo.
 
-Depois abra `http://localhost:4200/`.
+Abra `http://localhost:4200/`
 
 ## Build
 
@@ -48,55 +81,45 @@ npm run build
 
 ## Estrutura de pastas
 
-```text
-server/
-  .env
-  .env.example
-  index.js
-src/
-	app/
-		components/
-			buy-stock-modal/
-			navbar/
-			portfolio-summary/
-			portfolio-table/
-			summary-cards/
-			stock-chart/
-			trading-panel/
-			transaction-history/
-			toast-notifications/
-			sell-stock-modal/
-			upload-json/
-			watchlist/
-		models/
-			chart-data.model.ts
-			portfolio-position.model.ts
-			stock.model.ts
-			toast.model.ts
-		services/
-			chart.service.ts
-			portfolio-api.service.ts
-			notification.service.ts
-			portfolio.service.ts
-			storage.service.ts
-			trading.service.ts
-			stock-api.service.ts
-		app.component.*
-		app.config.ts
-		app.routes.ts
-	assets/
-		example-portfolio.json
-	environments/
-		environment.development.ts
-		environment.ts
 ```
+server/
+  index.js           — API Express: auth, portfolio, cotações, notícias
+  .env               — variáveis de ambiente (não incluído no repositório)
 
-## JSON de exemplo
-
-O ficheiro [src/assets/example-portfolio.json](src/assets/example-portfolio.json) inclui um exemplo pronto a importar.
+src/
+  app/
+    core/
+      api/           — serviços HTTP (auth, portfolio, stock, market)
+      finance/       — matemática financeira (PnL, risco, indicadores, trading)
+      guards/        — authGuard, guestGuard
+      interceptors/  — authInterceptor (JWT nos pedidos)
+      layout/        — MainLayout, Sidebar, Topbar
+      models/        — interfaces e tipos
+      services/      — alertas, notificações, tema, gráficos
+      store/         — AuthStore, PortfolioStore (signals)
+    features/
+      auth/          — login, registo
+      dashboard/     — KPIs, movers, watchlist, setor, notícias
+      portfolio/     — posições, modal de adicionar
+      trading/       — ordens de mercado, limite, stop
+      screener/      — filtros + AI Insights
+      stocks/        — detalhe de ação com gráfico
+      analytics/     — análise detalhada da carteira
+      watchlist/     — lista de acompanhamento
+      alerts/        — alertas de preço
+      market/        — visão geral do mercado
+      news/          — notícias gerais
+      transactions/  — histórico de operações
+    shared/
+      charts/        — AllocationDonut, PerfChart
+      components/    — design system (cards, badges, skeleton, toast, trade-modal)
+      pipes/         — formatação de moeda e variação
+  environments/
+    environment.ts
+```
 
 ## Notas
 
-- O dashboard usa Bootstrap 5, Bootstrap Icons e ApexCharts.
-- Os totais são recalculados automaticamente após importação e atualização das cotações.
-- As posições são guardadas em `localStorage` e sincronizadas com MongoDB quando a API está disponível.
+- Cada utilizador tem o seu portfólio isolado no MongoDB — não existe partilha de dados entre contas.
+- O plano gratuito do Finnhub tem limite de 60 pedidos/minuto; cotações são cacheadas no servidor para minimizar o impacto.
+- Todos os dados são geridos exclusivamente pelo MongoDB — não é usado localStorage para dados de portfólio.
