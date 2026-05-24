@@ -1,0 +1,493 @@
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div>
+    <h1 class="ds-page-title">Trading</h1>
+    <p class="ds-page-subtitle">Ordens avançadas · stop loss · take profit · trailing stop</p>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+    @for (tab of [['order','Nova Ordem'],['pending','Pendentes'],['history','Histórico'],['sizing','Calc. Posição']] ; track tab[0]) {
+      <button
+        class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+        [ngClass]="activeTab() === tab[0]
+          ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
+          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+        (click)="activeTab.set($any(tab[0]))">
+        {{ tab[1] }}
+        @if (tab[0] === 'pending' && store.pendingOrders().length) {
+          <span class="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand-500 text-white text-[10px]">
+            {{ store.pendingOrders().length }}
+          </span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB: NOVA ORDEM
+  ═══════════════════════════════════════════ -->
+  @if (activeTab() === 'order') {
+    <div class="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
+
+      <!-- Order form -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Colocar Ordem</span>
+        </div>
+        <div class="px-5 py-5 space-y-4">
+
+          <!-- Ticker -->
+          <div>
+            <label class="ds-label">Ticker</label>
+            <div class="flex gap-2">
+              <input
+                class="ds-input flex-1 uppercase font-bold tracking-wider"
+                placeholder="Ex: AAPL"
+                [(ngModel)]="ticker"
+                (ngModelChange)="ticker=$event.toUpperCase()" />
+              @if (currentQuote()) {
+                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm">
+                  <span class="font-extrabold text-slate-800 dark:text-slate-100">{{ fmtPrice(currentQuote()!.price) }}</span>
+                  <span class="font-semibold text-xs"
+                    [ngClass]="currentQuote()!.changePercent >= 0 ? 'text-emerald-600' : 'text-red-500'">
+                    {{ currentQuote()!.changePercent >= 0 ? '+' : '' }}{{ currentQuote()!.changePercent | number:'1.2-2' }}%
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Side -->
+          <div>
+            <label class="ds-label">Direção</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                class="py-2 rounded-xl text-sm font-bold border-2 transition-all"
+                [ngClass]="side() === 'buy'
+                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-emerald-400'"
+                (click)="side.set('buy')">
+                <i class="bi bi-bag-plus me-1.5"></i>Comprar
+              </button>
+              <button
+                class="py-2 rounded-xl text-sm font-bold border-2 transition-all"
+                [ngClass]="side() === 'sell'
+                  ? 'bg-red-500 border-red-500 text-white'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-red-400'"
+                (click)="side.set('sell')">
+                <i class="bi bi-bag-dash me-1.5"></i>Vender
+              </button>
+            </div>
+          </div>
+
+          <!-- Order type -->
+          <div>
+            <label class="ds-label">Tipo de Ordem</label>
+            <div class="grid grid-cols-2 gap-1.5">
+              @for (ot of orderTypes; track ot.value) {
+                <button
+                  class="px-3 py-2 rounded-xl text-xs font-bold border transition-all text-left"
+                  [ngClass]="orderType() === ot.value
+                    ? 'bg-brand-50 dark:bg-brand-900/30 border-brand-400 text-brand-700 dark:text-brand-300'
+                    : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-brand-300'"
+                  (click)="orderType.set(ot.value)"
+                  [title]="ot.desc">
+                  {{ ot.label }}
+                </button>
+              }
+            </div>
+            <p class="mt-1.5 text-xs text-slate-400">{{ currentOrderTypeDesc }}</p>
+          </div>
+
+          <!-- Quantity -->
+          <div>
+            <label class="ds-label">Quantidade</label>
+            <div class="flex gap-2">
+              <input
+                type="number"
+                min="1"
+                class="ds-input flex-1"
+                [(ngModel)]="quantity" />
+              @if (side() === 'buy') {
+                <button
+                  class="px-3 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 border border-slate-200 dark:border-slate-600 transition-colors"
+                  (click)="setMaxQty()"
+                  title="Máximo possível">
+                  Máx
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Limit price -->
+          @if (showLimit()) {
+            <div>
+              <label class="ds-label">Preço Limite</label>
+              <input type="number" step="0.01" min="0" class="ds-input w-full" [(ngModel)]="limitPrice" placeholder="0.00" />
+            </div>
+          }
+
+          <!-- Stop price -->
+          @if (showStop()) {
+            <div>
+              <label class="ds-label">Preço de Stop</label>
+              <input type="number" step="0.01" min="0" class="ds-input w-full" [(ngModel)]="stopPrice" placeholder="0.00" />
+            </div>
+          }
+
+          <!-- Trailing percent -->
+          @if (showTrail()) {
+            <div>
+              <label class="ds-label">Trail % <span class="text-slate-400 font-normal">(distância do pico)</span></label>
+              <div class="flex items-center gap-3">
+                <input type="range" min="0.1" max="20" step="0.1" class="flex-1 accent-brand-500" [(ngModel)]="trailPct" />
+                <span class="text-sm font-bold text-slate-700 dark:text-slate-200 w-12 text-right">{{ trailPct }}%</span>
+              </div>
+            </div>
+          }
+
+          <!-- Summary row -->
+          @if (side() === 'buy' && quantity > 0) {
+            <div class="flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-700">
+              <span>Custo estimado</span>
+              <span class="font-bold text-slate-800 dark:text-slate-100">{{ fmtPrice(estimatedCost()) }}</span>
+            </div>
+          }
+
+          <!-- Submit -->
+          <button
+            class="w-full py-2.5 rounded-xl font-bold text-sm text-white transition-colors disabled:opacity-50"
+            [ngClass]="side() === 'buy' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'"
+            [disabled]="!ticker || quantity <= 0 || store.loading()"
+            (click)="submitOrder()">
+            @if (store.loading()) {
+              <span class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin me-2"></span>
+            }
+            {{ orderType() === 'market' ? (side() === 'buy' ? 'Comprar Agora' : 'Vender Agora') : 'Colocar Ordem' }}
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Right: balance + positions cards -->
+      <div class="flex flex-col gap-4">
+
+        <!-- Balance -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-400 font-medium">Saldo disponível</p>
+            <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">{{ fmtPrice(store.summary().balance) }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-400 font-medium">Valor da conta</p>
+            <p class="text-base font-bold text-slate-600 dark:text-slate-300 tabular-nums">{{ fmtPrice(store.summary().accountValue) }}</p>
+          </div>
+        </div>
+
+        <!-- Order type explainer -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4 space-y-3">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Guia de Ordens</p>
+          @for (ot of orderTypes; track ot.value) {
+            <div class="flex items-start gap-3"
+              [ngClass]="orderType() === ot.value ? 'opacity-100' : 'opacity-40'">
+              <span class="mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex-shrink-0">
+                {{ ot.label }}
+              </span>
+              <p class="text-xs text-slate-600 dark:text-slate-400">{{ ot.desc }}</p>
+            </div>
+          }
+        </div>
+
+        <!-- Positions quick view -->
+        @if (store.positionsView().length) {
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+            <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Posições Abertas</span>
+            </div>
+            <div class="divide-y divide-slate-50 dark:divide-slate-700 max-h-52 overflow-y-auto">
+              @for (pos of store.positionsView(); track pos.ticker) {
+                <div class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
+                  (click)="ticker = pos.ticker">
+                  <app-ticker-logo [ticker]="pos.ticker" [size]="28" rounded="rounded-lg"></app-ticker-logo>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ pos.ticker }}</p>
+                    <p class="text-[10px] text-slate-400">{{ pos.quantity }} ações</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{{ fmtPrice(pos.currentPrice) }}</p>
+                    <p class="text-[10px] tabular-nums font-semibold"
+                      [ngClass]="pos.profitLossPercent >= 0 ? 'text-emerald-600' : 'text-red-500'">
+                      {{ pos.profitLossPercent >= 0 ? '+' : '' }}{{ pos.profitLossPercent | number:'1.2-2' }}%
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════
+       TAB: PENDENTES
+  ═══════════════════════════════════════════ -->
+  @if (activeTab() === 'pending') {
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Ordens Pendentes</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold">
+          {{ store.pendingOrders().length }}
+        </span>
+      </div>
+
+      @if (!store.pendingOrders().length) {
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <i class="bi bi-hourglass text-3xl text-slate-200 dark:text-slate-600 mb-3"></i>
+          <p class="text-sm font-semibold text-slate-500">Sem ordens pendentes</p>
+          <p class="text-xs text-slate-400 mt-1">Coloque uma ordem limite, stop ou trailing.</p>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 dark:border-slate-700">
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Ticker</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Lado</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Qtd</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Preço Alvo</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Stop</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Trail%</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Criada</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
+              @for (order of store.pendingOrders(); track order.id) {
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <app-ticker-logo [ticker]="order.ticker" [size]="24" rounded="rounded-md"></app-ticker-logo>
+                      <span class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ order.ticker }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-md text-xs font-bold bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-300">
+                      {{ orderTypeLabel(order.type) }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-md text-xs font-bold"
+                      [ngClass]="order.side === 'buy'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'">
+                      {{ order.side === 'buy' ? 'Compra' : 'Venda' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right font-semibold tabular-nums text-slate-700 dark:text-slate-200">{{ order.quantity }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">{{ fmtPrice(order.limitPrice ?? 0) }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">{{ fmtPrice(order.stopPrice ?? 0) }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                    {{ order.trailPercent ? order.trailPercent + '%' : '—' }}
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-400">{{ fmtDate(order.createdAt) }}</td>
+                  <td class="px-4 py-3 text-right">
+                    <button
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-colors"
+                      (click)="cancelOrder(order.id)">
+                      Cancelar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════
+       TAB: HISTÓRICO
+  ═══════════════════════════════════════════ -->
+  @if (activeTab() === 'history') {
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+        <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Histórico de Ordens</span>
+      </div>
+
+      @if (!store.filledOrders().length) {
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <i class="bi bi-clock-history text-3xl text-slate-200 dark:text-slate-600 mb-3"></i>
+          <p class="text-sm font-semibold text-slate-500">Sem ordens executadas</p>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 dark:border-slate-700">
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Ticker</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Lado</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Qtd</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Preço Fill</th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Slippage</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Estado</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Executada</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
+              @for (order of store.filledOrders(); track order.id) {
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <app-ticker-logo [ticker]="order.ticker" [size]="24" rounded="rounded-md"></app-ticker-logo>
+                      <span class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ order.ticker }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-md text-xs font-bold bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-300">
+                      {{ orderTypeLabel(order.type) }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-md text-xs font-bold"
+                      [ngClass]="order.side === 'buy'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'">
+                      {{ order.side === 'buy' ? 'Compra' : 'Venda' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right font-semibold tabular-nums text-slate-700 dark:text-slate-200">{{ order.quantity }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums font-bold text-slate-700 dark:text-slate-200">{{ fmtPrice(order.filledPrice ?? 0) }}</td>
+                  <td class="px-4 py-3 text-right tabular-nums text-xs"
+                    [ngClass]="(order.slippage ?? 0) > 0 ? 'text-amber-600' : 'text-slate-400'">
+                    {{ order.slippage ? fmtPrice(Math.abs(order.slippage)) : '—' }}
+                    @if (order.gapExecution) {
+                      <span class="ml-1 px-1 rounded text-[9px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">GAP</span>
+                    }
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold" [ngClass]="orderStatusClass(order.status)">
+                      {{ order.status }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-400">{{ order.filledAt ? fmtDate(order.filledAt) : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════
+       TAB: CALCULADORA DE POSIÇÃO
+  ═══════════════════════════════════════════ -->
+  @if (activeTab() === 'sizing') {
+    <div class="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6 items-start">
+
+      <!-- Inputs -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Parâmetros</span>
+        </div>
+        <div class="px-5 py-5 space-y-4">
+
+          <div>
+            <label class="ds-label">Risco por operação</label>
+            <div class="flex items-center gap-3">
+              <input type="range" min="0.1" max="10" step="0.1" class="flex-1 accent-brand-500" [(ngModel)]="sizingRiskPct" />
+              <span class="text-sm font-bold text-slate-700 dark:text-slate-200 w-12 text-right">{{ sizingRiskPct }}%</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">
+              = {{ fmtPrice(store.summary().accountValue * sizingRiskPct / 100) }} do capital total
+            </p>
+          </div>
+
+          <div>
+            <label class="ds-label">Preço de entrada</label>
+            <input type="number" step="0.01" min="0" class="ds-input w-full" [(ngModel)]="sizingEntry" placeholder="0.00" />
+          </div>
+
+          <div>
+            <label class="ds-label">Stop loss</label>
+            <input type="number" step="0.01" min="0" class="ds-input w-full" [(ngModel)]="sizingStop" placeholder="0.00" />
+          </div>
+
+          <div>
+            <label class="ds-label">Win rate estimada</label>
+            <div class="flex items-center gap-3">
+              <input type="range" min="10" max="90" step="1" class="flex-1 accent-brand-500" [(ngModel)]="sizingWinRate" />
+              <span class="text-sm font-bold text-slate-700 dark:text-slate-200 w-12 text-right">{{ sizingWinRate }}%</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Results -->
+      @if (sizingResult()) {
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+            <p class="text-xs text-slate-400 font-medium">Nº de ações</p>
+            <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums mt-1">{{ sizingResult()!.shares }}</p>
+            <p class="text-xs text-slate-400 mt-1">ações a comprar</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+            <p class="text-xs text-slate-400 font-medium">Valor da posição</p>
+            <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums mt-1">{{ fmtPrice(sizingResult()!.positionValue) }}</p>
+            <p class="text-xs text-slate-400 mt-1">custo total</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+            <p class="text-xs text-slate-400 font-medium">Risco máximo</p>
+            <p class="text-2xl font-extrabold text-red-500 tabular-nums mt-1">{{ fmtPrice(sizingResult()!.riskAmount) }}</p>
+            <p class="text-xs text-slate-400 mt-1">perda máxima ({{ sizingRiskPct }}%)</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+            <p class="text-xs text-slate-400 font-medium">Risco/Recompensa</p>
+            <p class="text-2xl font-extrabold tabular-nums mt-1"
+              [ngClass]="sizingResult()!.rr >= 2 ? 'text-emerald-600' : sizingResult()!.rr >= 1 ? 'text-amber-600' : 'text-red-500'">
+              1 : {{ sizingResult()!.rr | number:'1.1-1' }}
+            </p>
+            <p class="text-xs text-slate-400 mt-1">{{ sizingResult()!.rr >= 2 ? 'Excelente' : sizingResult()!.rr >= 1 ? 'Aceitável' : 'Pobre' }}</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+            <p class="text-xs text-slate-400 font-medium">Valor esperado</p>
+            <p class="text-2xl font-extrabold tabular-nums mt-1"
+              [ngClass]="sizingResult()!.ev >= 0 ? 'text-emerald-600' : 'text-red-500'">
+              {{ sizingResult()!.ev >= 0 ? '+' : '' }}{{ fmtPrice(sizingResult()!.ev) }}
+            </p>
+            <p class="text-xs text-slate-400 mt-1">por operação (win {{ sizingWinRate }}%)</p>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+            <p class="text-xs text-slate-400 font-medium">% da conta</p>
+            <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums mt-1">
+              {{ (sizingResult()!.positionValue / store.summary().accountValue * 100) | number:'1.1-1' }}%
+            </p>
+            <p class="text-xs text-slate-400 mt-1">alocação desta posição</p>
+          </div>
+
+        </div>
+      } @else {
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card flex flex-col items-center justify-center py-20 text-center">
+          <i class="bi bi-calculator text-4xl text-slate-200 dark:text-slate-600 mb-4"></i>
+          <p class="text-sm font-semibold text-slate-500">Preencha entrada e stop</p>
+          <p class="text-xs text-slate-400 mt-1">A calculadora irá dimensionar a posição automaticamente.</p>
+        </div>
+      }
+    </div>
+  }
+
+</div>

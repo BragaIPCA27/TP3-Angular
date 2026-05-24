@@ -1,0 +1,86 @@
+<header class="sticky top-0 z-30 h-16 flex items-center gap-3 px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-card">
+
+  <!-- Sidebar toggle -->
+  <button
+    class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+    (click)="toggleSidebar.emit()"
+    title="Menu">
+    <i class="bi bi-list text-xl"></i>
+  </button>
+
+  <!-- Search -->
+  <div class="relative flex-1 max-w-md">
+    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+    <input
+      class="w-full h-9 pl-8 pr-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none transition-all"
+      placeholder="Pesquisar ticker…  ex: AAPL, TSLA, MSFT"
+      autocomplete="off"
+      spellcheck="false"
+      style="text-transform:uppercase"
+      [formControl]="searchControl"
+      (keydown.enter)="submit()" />
+  </div>
+
+  <div class="ml-auto flex items-center gap-2">
+
+    <!-- Market status badge -->
+    <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold tracking-widest"
+      [ngClass]="statusConfig.badge">
+      <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" [ngClass]="statusConfig.dot"></span>
+      <span>{{ marketLabel() }}</span>
+    </div>
+
+    <!-- Clock -->
+    <span class="hidden xl:block text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">{{ clock() }}</span>
+
+    <!-- Balance chip -->
+    <div class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs">
+      <i class="bi bi-wallet2 text-slate-400"></i>
+      <span class="text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] font-bold">Conta</span>
+      <span class="font-bold text-slate-700 dark:text-slate-200">{{ store.summary().accountValue | currencyFmt:0 }}</span>
+    </div>
+
+    <!-- Refresh -->
+    <button
+      class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+      [disabled]="store.loading()"
+      (click)="store.refreshQuotes()"
+      title="Atualizar cotações">
+      <i class="bi bi-arrow-clockwise text-base" [class.animate-spin-slow]="store.loading()"></i>
+    </button>
+
+    <!-- Theme toggle -->
+    <button
+      class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+      (click)="theme.toggle()"
+      [title]="theme.isDark() ? 'Modo claro' : 'Modo escuro'">
+      <i class="bi text-base" [class.bi-sun-fill]="theme.isDark()" [class.bi-moon-stars-fill]="!theme.isDark()"></i>
+    </button>
+
+    <!-- Divider -->
+    <div class="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+    <!-- Notification bell -->
+    <button
+      class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+      title="Notificações">
+      <i class="bi bi-bell text-base"></i>
+    </button>
+
+    <!-- Avatar + logout -->
+    <div class="flex items-center gap-1">
+      <div
+        class="w-9 h-9 rounded-full bg-brand-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none"
+        [title]="auth.user()?.name ?? 'Utilizador'">
+        {{ auth.userInitials() }}
+      </div>
+      <button
+        class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+        title="Terminar sessão"
+        (click)="auth.logout()">
+        <i class="bi bi-box-arrow-right text-base"></i>
+      </button>
+    </div>
+
+  </div>
+</header>

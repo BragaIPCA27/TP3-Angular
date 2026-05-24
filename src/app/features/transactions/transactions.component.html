@@ -1,0 +1,128 @@
+<div class="space-y-6">
+
+  <!-- Page header -->
+  <div>
+    <h1 class="ds-page-title">Histórico de Transações</h1>
+    <p class="ds-page-subtitle">Todas as operações de compra e venda realizadas</p>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-card px-4 py-3">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Total Operações</p>
+      <p class="ds-page-title">{{ stats().total }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-card px-4 py-3">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Compras</p>
+      <p class="text-xl font-extrabold text-emerald-500">{{ stats().buys }}</p>
+      <p class="text-xs text-slate-400 tabular-nums">{{ stats().totalBuy | currencyFmt:0 }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-card px-4 py-3">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Vendas</p>
+      <p class="text-xl font-extrabold text-red-500">{{ stats().sells }}</p>
+      <p class="text-xs text-slate-400 tabular-nums">{{ stats().totalSell | currencyFmt:0 }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-card px-4 py-3">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Saldo Atual</p>
+      <p class="ds-page-title">{{ store.summary().balance | currencyFmt:0 }}</p>
+    </div>
+  </div>
+
+  <!-- Table card -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+
+      <!-- Type filter tabs -->
+      <div class="flex items-center p-1 gap-0.5 bg-slate-100 dark:bg-slate-700 rounded-xl">
+        @for (opt of filterOptions; track opt.value) {
+          <button
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            [ngClass]="filter() === opt.value ? 'bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-100 shadow-card' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'"
+            (click)="filter.set(opt.value)">
+            {{ opt.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[160px] max-w-xs">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+        <input
+          class="w-full h-8 pl-8 pr-3 rounded-lg bg-slate-100 dark:bg-slate-700 border border-transparent focus:border-brand-500 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none uppercase"
+          placeholder="Filtrar por ticker…"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)" />
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <span class="text-xs text-slate-400">{{ filtered().length }} resultado(s)</span>
+        <button
+          class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          title="Inverter ordem"
+          (click)="toggleSort()">
+          <i class="bi text-sm" [class.bi-sort-down]="sortDesc()" [class.bi-sort-up]="!sortDesc()"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[640px] text-sm">
+        <thead>
+          <tr class="bg-slate-50 dark:bg-slate-700/50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <th class="px-5 py-3 text-left">Data / Hora</th>
+            <th class="px-3 py-3 text-center">Tipo</th>
+            <th class="px-3 py-3 text-left">Ticker</th>
+            <th class="px-3 py-3 text-right">Quantidade</th>
+            <th class="px-3 py-3 text-right">Preço Exec.</th>
+            <th class="px-3 py-3 text-right">Total</th>
+            <th class="px-3 py-3 text-right">Saldo Após</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
+          @if (!filtered().length) {
+            <tr>
+              <td colspan="7" class="px-5 py-12 text-center">
+                <i class="bi bi-receipt text-2xl text-slate-200 dark:text-slate-600 block mb-2"></i>
+                <p class="text-sm text-slate-400">Nenhuma transação encontrada.</p>
+              </td>
+            </tr>
+          } @else {
+            @for (tx of filtered(); track tx.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-5 py-3 text-xs text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
+                  {{ tx.timestamp | date:'dd/MM/yyyy' }}<br>
+                  <span class="text-slate-400 dark:text-slate-500">{{ tx.timestamp | date:'HH:mm:ss' }}</span>
+                </td>
+                <td class="px-3 py-3 text-center">
+                  <span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-widest"
+                    [ngClass]="tx.type === 'BUY'
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'">
+                    {{ tx.type === 'BUY' ? 'COMPRA' : 'VENDA' }}
+                  </span>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex items-center gap-2">
+                    <app-ticker-logo [ticker]="tx.ticker" [size]="28"></app-ticker-logo>
+                    <span class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ tx.ticker }}</span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right font-semibold tabular-nums text-slate-700 dark:text-slate-200">{{ tx.quantity | number:'1.0-0' }}</td>
+                <td class="px-3 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">{{ tx.price | currencyFmt:2 }}</td>
+                <td class="px-3 py-3 text-right font-bold tabular-nums"
+                  [class.text-emerald-500]="tx.type === 'SELL'"
+                  [class.text-red-500]="tx.type === 'BUY'">
+                  {{ tx.type === 'BUY' ? '-' : '+' }}{{ tx.total | currencyFmt:0 }}
+                </td>
+                <td class="px-3 py-3 text-right tabular-nums text-xs text-slate-500 dark:text-slate-400">{{ tx.balanceAfter | currencyFmt:0 }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

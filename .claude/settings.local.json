@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\diogo\\\\Desktop\\\\Ipca\\\\Semestre 2\\\\Programaçao Web 2\\\\Tp3\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(ConvertTo-Json)"
+    ]
+  }
+}

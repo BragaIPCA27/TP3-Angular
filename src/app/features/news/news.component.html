@@ -1,0 +1,129 @@
+<div class="space-y-6">
+
+  <!-- Page header -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="ds-page-title">Notícias</h1>
+      <p class="ds-page-subtitle">Mercado global · atualizado a cada 15 min</p>
+    </div>
+    <span class="flex items-center gap-1.5 text-xs text-slate-400">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      Live
+    </span>
+  </div>
+
+  <!-- Search bar -->
+  <div class="flex items-center gap-3">
+    <div class="relative flex-1 max-w-sm">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+      <input
+        class="w-full h-10 pl-9 pr-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold tracking-widest text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-brand-500 uppercase transition-all shadow-card"
+        placeholder="Filtrar por empresa… ex: AAPL"
+        [ngModel]="tickerInput()"
+        (ngModelChange)="tickerInput.set($event)"
+        (keydown.enter)="searchTicker()" />
+    </div>
+    <button
+      class="h-10 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-sm font-bold text-white transition-colors shadow-card"
+      (click)="searchTicker()">
+      Pesquisar
+    </button>
+    @if (activeTicker()) {
+      <button
+        class="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shadow-card flex items-center gap-2"
+        (click)="clearSearch()">
+        <i class="bi bi-x-lg text-xs"></i>
+        Limpar
+      </button>
+    }
+  </div>
+
+  <!-- Active filter badge -->
+  @if (activeTicker()) {
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-slate-500 dark:text-slate-400">A mostrar notícias de</span>
+      <span class="px-2.5 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 text-xs font-extrabold tracking-widest">
+        {{ activeTicker() }}
+      </span>
+    </div>
+  }
+
+  <!-- Loading skeletons -->
+  @if (isLoading() && !displayNews().length) {
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      @for (i of [1,2,3,4,5,6]; track i) {
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+          <div class="w-full h-36 bg-slate-100 dark:bg-slate-700 animate-pulse"></div>
+          <div class="p-4 space-y-2.5">
+            <div class="h-3 bg-slate-100 dark:bg-slate-700 rounded animate-pulse w-5/6"></div>
+            <div class="h-3 bg-slate-100 dark:bg-slate-700 rounded animate-pulse w-full"></div>
+            <div class="h-2.5 bg-slate-100 dark:bg-slate-700 rounded animate-pulse w-1/2"></div>
+          </div>
+        </div>
+      }
+    </div>
+
+  <!-- News grid -->
+  } @else if (displayNews().length) {
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      @for (article of displayNews(); track article.id) {
+        <a
+          [href]="article.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden hover:shadow-card-md hover:border-brand-300 dark:hover:border-brand-700 transition-all group flex flex-col">
+
+          <!-- Thumbnail -->
+          @if (article.image) {
+            <div class="w-full h-40 overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0">
+              <img
+                [src]="article.image"
+                [alt]="article.headline"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                (error)="$any($event.target).parentElement.style.display='none'">
+            </div>
+          }
+
+          <div class="flex flex-col flex-1 p-4 gap-2">
+            <!-- Source + time -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-brand-500 truncate">{{ article.source }}</span>
+              <span class="text-[10px] text-slate-400 flex-shrink-0">{{ timeAgo(article.datetime) }} atrás</span>
+            </div>
+
+            <!-- Headline -->
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-snug line-clamp-3 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors flex-1">
+              {{ article.headline }}
+            </p>
+
+            <!-- Summary -->
+            @if (article.summary) {
+              <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">{{ article.summary }}</p>
+            }
+
+            <!-- Read more -->
+            <div class="flex items-center gap-1 text-xs font-semibold text-brand-500 group-hover:text-brand-600 mt-1">
+              <span>Ler artigo</span>
+              <i class="bi bi-arrow-up-right text-[10px]"></i>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+
+  <!-- Empty state -->
+  } @else {
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+      <i class="bi bi-newspaper text-5xl text-slate-200 dark:text-slate-600 mb-4"></i>
+      <p class="text-base font-semibold text-slate-500 dark:text-slate-400">Sem notícias disponíveis</p>
+      <p class="text-sm text-slate-400 mt-1">
+        @if (activeTicker()) {
+          Não foram encontradas notícias recentes para <strong>{{ activeTicker() }}</strong>.
+        } @else {
+          Tenta novamente mais tarde.
+        }
+      </p>
+    </div>
+  }
+
+</div>

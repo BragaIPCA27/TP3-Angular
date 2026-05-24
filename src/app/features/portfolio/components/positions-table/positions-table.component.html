@@ -1,0 +1,166 @@
+<div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+    <div>
+      <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200">Posições em Carteira</h2>
+      <p class="text-xs text-slate-400 mt-0.5">{{ rows.length }} ativos · atualização automática</p>
+    </div>
+    <div class="relative">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+      <input
+        class="h-8 w-56 pl-8 pr-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 outline-none focus:ring-2 focus:ring-brand-500/30 border border-transparent focus:border-brand-500"
+        placeholder="Filtrar por ticker ou nome…"
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event)" />
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[900px] text-sm">
+      <thead>
+        <tr class="bg-slate-50 dark:bg-slate-700/50 text-xs font-bold uppercase tracking-wider text-slate-400">
+          <th class="px-5 py-3 text-left cursor-pointer hover:text-slate-600 dark:hover:text-slate-200 transition-colors" (click)="sort('ticker')">
+            <span class="flex items-center gap-1">Ação <i class="bi" [class]="sortIcon('ticker')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('quantity')">
+            <span class="flex items-center justify-end gap-1">Qtd. <i class="bi" [class]="sortIcon('quantity')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('averagePrice')">
+            <span class="flex items-center justify-end gap-1">Preço Méd. <i class="bi" [class]="sortIcon('averagePrice')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('currentPrice')">
+            <span class="flex items-center justify-end gap-1">Cotação <i class="bi" [class]="sortIcon('currentPrice')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('marketValue')">
+            <span class="flex items-center justify-end gap-1">Val. Mercado <i class="bi" [class]="sortIcon('marketValue')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('profitLoss')">
+            <span class="flex items-center justify-end gap-1">Resultado <i class="bi" [class]="sortIcon('profitLoss')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('dailyChangePercent')">
+            <span class="flex items-center justify-end gap-1">Var. Dia <i class="bi" [class]="sortIcon('dailyChangePercent')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-right cursor-pointer hover:text-slate-600 dark:hover:text-slate-200" (click)="sort('weight')">
+            <span class="flex items-center justify-end gap-1">Peso <i class="bi" [class]="sortIcon('weight')"></i></span>
+          </th>
+          <th class="px-3 py-3 text-center">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
+        @if (loading) {
+          @for (i of [1,2,3]; track i) {
+            <tr>
+              <td colspan="9" class="px-5 py-4">
+                <div class="h-4 bg-slate-100 dark:bg-slate-700 rounded animate-pulse"></div>
+              </td>
+            </tr>
+          }
+        } @else if (!filtered().length) {
+          <tr>
+            <td colspan="9">
+              <app-empty-state icon="briefcase" title="Sem posições" subtitle="Compre ou adicione ações para começar."></app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filtered(); track row.ticker) {
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
+              (click)="selectTicker.emit(row.ticker)">
+
+              <!-- Ticker + Company -->
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <app-ticker-logo [ticker]="row.ticker" [size]="32"></app-ticker-logo>
+                  <div>
+                    <p class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ row.ticker }}</p>
+                    <p class="text-xs text-slate-400 truncate max-w-[140px]">{{ row.company }}</p>
+                  </div>
+                </div>
+              </td>
+
+              <td class="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{{ row.quantity | number:'1.0-0' }}</td>
+              <td class="px-3 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300">{{ row.averagePrice | currencyFmt:2 }}</td>
+              <td class="px-3 py-3 text-right tabular-nums font-semibold text-slate-700 dark:text-slate-200">{{ row.currentPrice | currencyFmt:2 }}</td>
+              <td class="px-3 py-3 text-right tabular-nums font-bold text-slate-800 dark:text-slate-100">{{ row.marketValue | currencyFmt:0 }}</td>
+
+              <!-- P&L -->
+              <td class="px-3 py-3 text-right">
+                <p class="font-bold tabular-nums"
+                  [class.text-emerald-500]="row.profitLoss >= 0.5"
+                  [class.text-red-500]="row.profitLoss < -0.5"
+                  [class.text-slate-400]="row.profitLoss > -0.5 && row.profitLoss < 0.5">
+                  {{ row.profitLoss >= 0 ? '+' : '' }}{{ row.profitLoss | currencyFmt:0 }}
+                </p>
+                <p class="text-xs tabular-nums"
+                  [class.text-emerald-400]="row.profitLossPercent > 0.005"
+                  [class.text-red-400]="row.profitLossPercent < -0.005"
+                  [class.text-slate-400]="row.profitLossPercent >= -0.005 && row.profitLossPercent <= 0.005">
+                  {{ row.profitLossPercent >= 0 ? '+' : '' }}{{ row.profitLossPercent | number:'1.2-2' }}%
+                </p>
+              </td>
+
+              <!-- Daily change -->
+              <td class="px-3 py-3 text-right">
+                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-bold tabular-nums"
+                  [ngClass]="row.dailyChangePercent > 0
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    : row.dailyChangePercent < 0
+                      ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-slate-100 text-slate-500'">
+                  {{ row.dailyChangePercent >= 0 ? '+' : '' }}{{ row.dailyChangePercent | number:'1.2-2' }}%
+                </span>
+              </td>
+
+              <!-- Weight -->
+              <td class="px-3 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <div class="w-12 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-brand-500 transition-all" [style.width.%]="row.weight"></div>
+                  </div>
+                  <span class="text-xs tabular-nums text-slate-500 dark:text-slate-400 w-8 text-right">{{ row.weight | number:'1.0-0' }}%</span>
+                </div>
+              </td>
+
+              <!-- Actions -->
+              <td class="px-3 py-3" (click)="$event.stopPropagation()">
+                <div class="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                    title="Comprar mais"
+                    (click)="openTrade.emit({ mode: 'buy', ticker: row.ticker })">
+                    <i class="bi bi-plus text-base"></i>
+                  </button>
+                  <button
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                    title="Vender"
+                    (click)="openTrade.emit({ mode: 'sell', ticker: row.ticker })">
+                    <i class="bi bi-dash text-base"></i>
+                  </button>
+                  <button
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                    title="Remover posição"
+                    (click)="removeRow.emit(row.ticker)">
+                    <i class="bi bi-trash3 text-xs"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+
+          <!-- Totals row -->
+          <tr class="bg-slate-50 dark:bg-slate-700/50 font-bold">
+            <td class="px-5 py-3 text-xs uppercase tracking-wider text-slate-500" colspan="4">Totais</td>
+            <td class="px-3 py-3 text-right tabular-nums text-slate-800 dark:text-slate-100">{{ totals().market | currencyFmt:0 }}</td>
+            <td class="px-3 py-3 text-right tabular-nums"
+              [class.text-emerald-500]="totals().pl >= 0.5"
+              [class.text-red-500]="totals().pl < -0.5">
+              {{ totals().pl >= 0 ? '+' : '' }}{{ totals().pl | currencyFmt:0 }}
+            </td>
+            <td colspan="3"></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,435 @@
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div>
+    <h1 class="ds-page-title">Screener & Insights</h1>
+    <p class="ds-page-subtitle">Filtre ações por critérios · sinais gerados por análise técnica</p>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+    @for (tab of [['screener','Screener'],['insights','AI Insights']] ; track tab[0]) {
+      <button
+        class="px-5 py-1.5 rounded-lg text-sm font-semibold transition-all"
+        [ngClass]="activeTab() === tab[0]
+          ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
+          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+        (click)="activeTab.set($any(tab[0]))">
+        @if (tab[0] === 'insights') {
+          <i class="bi bi-lightning-charge me-1.5 text-brand-500"></i>
+        }
+        {{ tab[1] }}
+        @if (tab[0] === 'insights' && signals().length) {
+          <span class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-500 text-white text-[10px]">
+            {{ signals().length }}
+          </span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TAB: SCREENER
+  ═══════════════════════════════════════════ -->
+  @if (activeTab() === 'screener') {
+    <div class="space-y-4">
+
+      <!-- Filters bar -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card px-5 py-4">
+        <div class="flex flex-wrap gap-3 items-end">
+
+          <!-- Search -->
+          <div>
+            <label class="ds-label">Pesquisa</label>
+            <div class="relative mt-1">
+              <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input
+                class="h-9 w-44 pl-8 pr-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 transition-all"
+                placeholder="AAPL, Apple..."
+                [ngModel]="filterSearch()"
+                (ngModelChange)="filterSearch.set($event)" />
+            </div>
+          </div>
+
+          <!-- Sector -->
+          <div>
+            <label class="ds-label">Setor</label>
+            <select
+              class="mt-1 h-9 px-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 transition-all"
+              [ngModel]="filterSector()"
+              (ngModelChange)="filterSector.set($event)">
+              @for (s of sectors; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Price min -->
+          <div>
+            <label class="ds-label">Preço mín.</label>
+            <input type="number" min="0" step="1" placeholder="0"
+              class="mt-1 h-9 w-24 px-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 transition-all"
+              [ngModel]="filterMinPrice()"
+              (ngModelChange)="filterMinPrice.set(+$event)" />
+          </div>
+
+          <!-- Price max -->
+          <div>
+            <label class="ds-label">Preço máx.</label>
+            <input type="number" min="0" step="1" placeholder="∞"
+              class="mt-1 h-9 w-24 px-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 transition-all"
+              [ngModel]="filterMaxPrice()"
+              (ngModelChange)="filterMaxPrice.set(+$event)" />
+          </div>
+
+          <!-- Change min -->
+          <div>
+            <label class="ds-label">Variação mín. %</label>
+            <input type="number" step="0.5"
+              class="mt-1 h-9 w-24 px-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 transition-all"
+              [ngModel]="filterMinChange()"
+              (ngModelChange)="filterMinChange.set(+$event)" />
+          </div>
+
+          <!-- Change max -->
+          <div>
+            <label class="ds-label">Variação máx. %</label>
+            <input type="number" step="0.5"
+              class="mt-1 h-9 w-24 px-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-brand-500 transition-all"
+              [ngModel]="filterMaxChange()"
+              (ngModelChange)="filterMaxChange.set(+$event)" />
+          </div>
+
+          <!-- Toggle: só watchlist -->
+          <div class="flex items-end gap-3 pb-0.5">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <span class="text-xs font-semibold text-slate-500">Só watchlist</span>
+              <div class="relative">
+                <input type="checkbox" class="sr-only peer"
+                  [ngModel]="filterWatchlist()"
+                  (ngModelChange)="filterWatchlist.set($event)">
+                <div class="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-brand-500 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform"></div>
+              </div>
+            </label>
+
+            <!-- Toggle: só carteira -->
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <span class="text-xs font-semibold text-slate-500">Só carteira</span>
+              <div class="relative">
+                <input type="checkbox" class="sr-only peer"
+                  [ngModel]="filterPortfolio()"
+                  (ngModelChange)="filterPortfolio.set($event)">
+                <div class="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-brand-500 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform"></div>
+              </div>
+            </label>
+
+            <!-- Toggle: com cotação -->
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <span class="text-xs font-semibold text-slate-500">Com cotação</span>
+              <div class="relative">
+                <input type="checkbox" class="sr-only peer"
+                  [ngModel]="filterHasQuote()"
+                  (ngModelChange)="filterHasQuote.set($event)">
+                <div class="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-brand-500 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-4 transition-transform"></div>
+              </div>
+            </label>
+          </div>
+
+          <!-- Results count + reset -->
+          <div class="ml-auto self-end flex items-center gap-3">
+            <button
+              class="text-xs text-slate-400 hover:text-brand-500 transition-colors"
+              (click)="filterSector.set('Todos'); filterMinPrice.set(0); filterMaxPrice.set(0); filterMinChange.set(-100); filterMaxChange.set(100); filterWatchlist.set(false); filterPortfolio.set(false); filterSearch.set('')">
+              <i class="bi bi-x-circle me-1"></i>Limpar
+            </button>
+            <span class="text-xs text-slate-400 font-medium">
+              {{ filteredRows().length }} resultado{{ filteredRows().length !== 1 ? 's' : '' }}
+            </span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+        @if (!filteredRows().length) {
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <i class="bi bi-funnel text-3xl text-slate-200 dark:text-slate-600 mb-3"></i>
+            <p class="text-sm font-semibold text-slate-500">Sem resultados</p>
+            <p class="text-xs text-slate-400 mt-1">Ajuste os filtros para ver mais ações.</p>
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
+
+                  <th class="px-4 py-3 text-left">
+                    <button class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      (click)="toggleSort('ticker')">
+                      Ticker
+                      @if (sortBy() === 'ticker') { <i class="bi text-[8px]" [ngClass]="sortDir() === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down'"></i> }
+                    </button>
+                  </th>
+
+                  <th class="px-4 py-3 text-left">
+                    <button class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      (click)="toggleSort('name')">
+                      Nome
+                      @if (sortBy() === 'name') { <i class="bi text-[8px]" [ngClass]="sortDir() === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down'"></i> }
+                    </button>
+                  </th>
+
+                  <th class="px-4 py-3 text-left">
+                    <button class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      (click)="toggleSort('sector')">
+                      Setor
+                      @if (sortBy() === 'sector') { <i class="bi text-[8px]" [ngClass]="sortDir() === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down'"></i> }
+                    </button>
+                  </th>
+
+                  <th class="px-4 py-3 text-right">
+                    <button class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-auto"
+                      (click)="toggleSort('price')">
+                      Preço
+                      @if (sortBy() === 'price') { <i class="bi text-[8px]" [ngClass]="sortDir() === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down'"></i> }
+                    </button>
+                  </th>
+
+                  <th class="px-4 py-3 text-right">
+                    <button class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-auto"
+                      (click)="toggleSort('change')">
+                      Variação
+                      @if (sortBy() === 'change') { <i class="bi text-[8px]" [ngClass]="sortDir() === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down'"></i> }
+                    </button>
+                  </th>
+
+                  <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Máx / Mín</th>
+                  <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Fecho Ant.</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Ações</th>
+
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-50 dark:divide-slate-700/40">
+                @for (row of filteredRows(); track row.ticker) {
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
+
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2.5">
+                        <app-ticker-logo [ticker]="row.ticker" [size]="30" rounded="rounded-lg"></app-ticker-logo>
+                        <div>
+                          <p class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100 text-xs">{{ row.ticker }}</p>
+                          @if (row.inPortfolio) {
+                            <span class="text-[9px] font-bold text-brand-500 uppercase tracking-wider">carteira</span>
+                          } @else if (row.inWatchlist) {
+                            <span class="text-[9px] font-bold text-amber-500 uppercase tracking-wider">watchlist</span>
+                          }
+                        </div>
+                      </div>
+                    </td>
+
+                    <td class="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 max-w-[180px] truncate">{{ row.name }}</td>
+
+                    <td class="px-4 py-3">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="sectorColors[row.sector]">
+                        {{ row.sector }}
+                      </span>
+                    </td>
+
+                    <td class="px-4 py-3 text-right font-bold tabular-nums text-slate-800 dark:text-slate-100 text-xs">
+                      {{ row.hasQuote ? fmtPrice(row.price) : '—' }}
+                    </td>
+
+                    <td class="px-4 py-3 text-right">
+                      @if (row.hasQuote) {
+                        <div class="flex flex-col items-end">
+                          <span class="font-bold tabular-nums text-xs"
+                            [ngClass]="row.changePercent >= 0 ? 'text-emerald-600' : 'text-red-500'">
+                            {{ row.changePercent >= 0 ? '+' : '' }}{{ row.changePercent | number:'1.2-2' }}%
+                          </span>
+                          <span class="text-[10px] tabular-nums text-slate-400">
+                            {{ row.change >= 0 ? '+' : '' }}{{ fmtPrice(row.change) }}
+                          </span>
+                        </div>
+                      } @else {
+                        <span class="text-slate-300 text-xs">—</span>
+                      }
+                    </td>
+
+                    <td class="px-4 py-3 text-right text-[10px] tabular-nums">
+                      @if (row.hasQuote) {
+                        <span class="text-emerald-600">{{ fmtPrice(row.high) }}</span>
+                        <span class="text-slate-300 mx-1">/</span>
+                        <span class="text-red-500">{{ fmtPrice(row.low) }}</span>
+                      } @else {
+                        <span class="text-slate-300">— / —</span>
+                      }
+                    </td>
+
+                    <td class="px-4 py-3 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                      {{ row.hasQuote ? fmtPrice(row.prevClose) : '—' }}
+                    </td>
+
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        @if (!row.inWatchlist) {
+                          <button
+                            class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-amber-600 border border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                            (click)="addToWatchlist(row.ticker)">
+                            <i class="bi bi-star me-1"></i>Watch
+                          </button>
+                        } @else {
+                          <button
+                            class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-amber-500 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 transition-colors"
+                            (click)="removeFromWatchlist(row.ticker)">
+                            <i class="bi bi-star-fill me-1"></i>Watch
+                          </button>
+                        }
+                        <a
+                          [routerLink]="['/trading']"
+                          class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-emerald-600 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                          <i class="bi bi-lightning-charge me-1"></i>Trade
+                        </a>
+                      </div>
+                    </td>
+
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════
+       TAB: AI INSIGHTS
+  ═══════════════════════════════════════════ -->
+  @if (activeTab() === 'insights') {
+    <div class="space-y-5">
+
+      @if (!signals().length) {
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card flex flex-col items-center justify-center py-16 text-center">
+          <i class="bi bi-lightning-charge text-4xl text-slate-200 dark:text-slate-600 mb-4"></i>
+          <p class="text-sm font-semibold text-slate-500">Sem sinais disponíveis</p>
+          <p class="text-xs text-slate-400 mt-1">Sincronize as cotações para gerar sinais.</p>
+        </div>
+      } @else {
+        <!-- Three columns: Comprar | Vender | Monitorizar -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+
+          <!-- COMPRAR -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+            <div class="px-4 py-3 border-b border-emerald-100 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-arrow-up-circle-fill text-emerald-500"></i>
+                <span class="text-sm font-bold text-emerald-700 dark:text-emerald-400">Comprar</span>
+              </div>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+                {{ signalsByAction().buy.length }}
+              </span>
+            </div>
+            @if (!signalsByAction().buy.length) {
+              <p class="text-xs text-slate-400 text-center py-8">Sem sinais de compra.</p>
+            } @else {
+              <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
+                @for (sig of signalsByAction().buy; track sig.ticker + sig.type) {
+                  <ng-container *ngTemplateOutlet="signalRow; context: { sig: sig }"></ng-container>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- VENDER -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+            <div class="px-4 py-3 border-b border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-arrow-down-circle-fill text-red-500"></i>
+                <span class="text-sm font-bold text-red-700 dark:text-red-400">Vender / Reduzir</span>
+              </div>
+              <span class="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-xs font-bold">
+                {{ signalsByAction().sell.length }}
+              </span>
+            </div>
+            @if (!signalsByAction().sell.length) {
+              <p class="text-xs text-slate-400 text-center py-8">Sem sinais de venda.</p>
+            } @else {
+              <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
+                @for (sig of signalsByAction().sell; track sig.ticker + sig.type) {
+                  <ng-container *ngTemplateOutlet="signalRow; context: { sig: sig }"></ng-container>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- MONITORIZAR -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden">
+            <div class="px-4 py-3 border-b border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-eye-fill text-amber-500"></i>
+                <span class="text-sm font-bold text-amber-700 dark:text-amber-400">Monitorizar</span>
+              </div>
+              <span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                {{ signalsByAction().watch.length }}
+              </span>
+            </div>
+            @if (!signalsByAction().watch.length) {
+              <p class="text-xs text-slate-400 text-center py-8">Sem alertas de monitorização.</p>
+            } @else {
+              <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
+                @for (sig of signalsByAction().watch; track sig.ticker + sig.type) {
+                  <ng-container *ngTemplateOutlet="signalRow; context: { sig: sig }"></ng-container>
+                }
+              </div>
+            }
+          </div>
+
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- Signal row template -->
+  <ng-template #signalRow let-sig="sig">
+    <div class="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer group/row"
+      [routerLink]="['/stocks']" [queryParams]="{ticker: sig.ticker}">
+      <!-- Ticker header -->
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-2">
+          <app-ticker-logo [ticker]="sig.ticker" [size]="22" rounded="rounded-md"></app-ticker-logo>
+          <span class="text-xs font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ sig.ticker }}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+            {{ sig.sector }}
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <!-- Strength dots -->
+          <div class="flex gap-0.5">
+            @for (dot of signalStrengthDots(); track dot) {
+              <span class="w-1 h-2.5 rounded-sm"
+                [ngClass]="dot <= sig.strength
+                  ? (sig.action === 'buy' ? 'bg-emerald-500' : sig.action === 'sell' ? 'bg-red-500' : 'bg-amber-500')
+                  : 'bg-slate-200 dark:bg-slate-600'">
+              </span>
+            }
+          </div>
+          <span class="text-xs font-bold tabular-nums"
+            [ngClass]="sig.changePercent >= 0 ? 'text-emerald-600' : 'text-red-500'">
+            {{ sig.changePercent >= 0 ? '+' : '' }}{{ sig.changePercent | number:'1.1-1' }}%
+          </span>
+          <i class="bi bi-chevron-right text-[10px] text-slate-300 dark:text-slate-600 opacity-0 group-hover/row:opacity-100 transition-opacity ml-0.5"></i>
+        </div>
+      </div>
+      <!-- Signal title -->
+      <p class="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-snug">{{ sig.title }}</p>
+      <!-- Description -->
+      <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">{{ sig.description }}</p>
+    </div>
+  </ng-template>
+
+</div>

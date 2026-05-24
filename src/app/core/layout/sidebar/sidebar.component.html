@@ -1,0 +1,61 @@
+<aside
+  class="fixed left-0 top-0 z-40 h-screen flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 ease-smooth select-none"
+  [class.w-64]="!collapsed"
+  [class.w-16]="collapsed">
+
+  <!-- Logo -->
+  <div class="flex items-center gap-3 px-4 h-16 border-b border-slate-800 flex-shrink-0">
+    <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
+      <i class="bi bi-bar-chart-line-fill text-white text-sm"></i>
+    </div>
+    @if (!collapsed) {
+      <div class="animate-fade-in min-w-0">
+        <p class="text-sm font-bold text-white truncate">Portfolio</p>
+        <p class="text-xs text-slate-500 truncate">Trading Virtual</p>
+      </div>
+      <button
+        class="ml-auto flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        (click)="toggle()"
+        title="Colapsar">
+        <i class="bi bi-layout-sidebar-reverse text-sm"></i>
+      </button>
+    }
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-1 px-2">
+    @for (group of navGroups; track group.label) {
+      @if (!collapsed) {
+        <p class="px-2 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 animate-fade-in">
+          {{ group.label }}
+        </p>
+      }
+      @for (item of group.items; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-brand-500/10 text-brand-400 border-brand-500"
+          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+          class="flex items-center gap-3 px-2 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent transition-all duration-150 group"
+          [title]="collapsed ? item.label : ''">
+          <i class="bi flex-shrink-0 text-base w-5 text-center" [class]="item.icon"></i>
+          @if (!collapsed) {
+            <span class="text-sm font-medium truncate animate-fade-in">{{ item.label }}</span>
+          }
+        </a>
+      }
+    }
+  </nav>
+
+  <!-- Balance card -->
+  @if (!collapsed) {
+    <div class="mx-2 mb-4 p-3 rounded-xl bg-slate-800 border border-slate-700 animate-fade-in">
+      <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Saldo Virtual</p>
+      <p class="text-lg font-extrabold text-white font-mono">{{ summary().balance | currencyFmt:0 }}</p>
+      <div class="mt-1 flex items-center justify-between text-xs">
+        <span class="text-slate-500">Valor conta</span>
+        <span class="font-semibold text-slate-300">{{ summary().accountValue | currencyFmt:0 }}</span>
+      </div>
+    </div>
+  }
+
+</aside>

@@ -1,0 +1,191 @@
+<div class="space-y-4">
+
+  <!-- Page header -->
+  <div>
+    <h1 class="ds-page-title">Mercado</h1>
+    <p class="ds-page-subtitle">Pesquise e analise ações em tempo real</p>
+  </div>
+
+  <!-- Main layout: stock list (left) + chart + actions (right) -->
+  <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
+
+    <!-- ── Stock catalog panel ─────────────────────────────────── -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card flex flex-col overflow-hidden" style="max-height: calc(100vh - 140px)">
+
+      <!-- Search -->
+      <div class="flex items-center gap-2 px-3 py-3 border-b border-slate-100 dark:border-slate-700">
+        <i class="bi bi-search text-slate-400 text-sm"></i>
+        <input
+          class="flex-1 bg-transparent text-sm font-bold tracking-widest text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none uppercase"
+          placeholder="AAPL, TSLA…"
+          [ngModel]="searchInput()"
+          (ngModelChange)="searchInput.set($event)"
+          (keydown.enter)="search()" />
+        @if (searchInput()) {
+          <button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" (click)="searchInput.set('')">
+            <i class="bi bi-x-lg text-xs"></i>
+          </button>
+        }
+      </div>
+
+      <!-- Sector filter chips -->
+      <div class="flex flex-wrap gap-1.5 px-3 py-2.5 border-b border-slate-100 dark:border-slate-700">
+        @for (s of sectors; track s) {
+          <button
+            class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
+            [ngClass]="selectedSector() === s
+              ? 'bg-brand-500 text-white'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'"
+            (click)="selectedSector.set(s)">
+            {{ s }}
+          </button>
+        }
+      </div>
+
+      <!-- Stock list -->
+      <div class="overflow-y-auto flex-1 divide-y divide-slate-50 dark:divide-slate-700/60">
+        @if (filteredStocks().length === 0) {
+          <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+            <i class="bi bi-search text-3xl mb-2"></i>
+            <p class="text-sm">Nenhuma ação encontrada</p>
+          </div>
+        }
+        @for (s of filteredStocks(); track s.ticker) {
+          <button
+            class="w-full flex items-center gap-3 py-2.5 text-left transition-all border-l-2"
+            [ngClass]="selectedTicker() === s.ticker
+              ? 'border-brand-500 bg-brand-50 dark:bg-slate-700/60 pl-3 pr-3'
+              : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/40 pl-3 pr-3'"
+            (click)="selectTicker(s.ticker)">
+
+            <!-- Company logo -->
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border"
+              [ngClass]="selectedTicker() === s.ticker
+                ? 'border-brand-400 bg-white dark:bg-slate-600'
+                : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700'">
+              @if (!failedLogos().has(s.ticker)) {
+                <img
+                  [src]="logoUrl(s.ticker)"
+                  (error)="onLogoError(s.ticker)"
+                  class="w-full h-full object-contain p-0.5"
+                  [alt]="s.ticker">
+              } @else {
+                <span class="font-black text-sm"
+                  [ngClass]="selectedTicker() === s.ticker
+                    ? 'text-brand-600 dark:text-brand-400'
+                    : 'text-slate-600 dark:text-slate-300'">
+                  {{ s.ticker.slice(0, 1) }}
+                </span>
+              }
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-extrabold text-slate-800 dark:text-slate-100">{{ s.ticker }}</span>
+                @if (heldTickers().has(s.ticker)) {
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>
+                }
+                @if (inWatchlist(s.ticker)) {
+                  <i class="bi bi-star-fill text-amber-400 text-[10px] flex-shrink-0"></i>
+                }
+              </div>
+              <p class="text-xs truncate" [ngClass]="selectedTicker() === s.ticker ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'">{{ s.name }}</p>
+            </div>
+
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0" [ngClass]="sectorClass(s.sector)">
+              {{ s.sector }}
+            </span>
+          </button>
+        }
+      </div>
+
+      <!-- Footer count -->
+      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700">
+        <p class="text-xs text-slate-400">{{ filteredStocks().length }} ações disponíveis</p>
+      </div>
+    </div>
+
+    <!-- ── Chart + Actions + News column ──────────────────────── -->
+    <div class="space-y-4">
+
+      <!-- Chart -->
+      <app-perf-chart [symbol]="selectedTicker()" [range]="chartRange()"></app-perf-chart>
+
+      <!-- Actions panel -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+            @if (!failedLogos().has(selectedTicker())) {
+              <img
+                [src]="logoUrl(selectedTicker())"
+                (error)="onLogoError(selectedTicker())"
+                class="w-full h-full object-contain p-0.5"
+                [alt]="selectedTicker()">
+            } @else {
+              <span class="font-black text-sm text-brand-600 dark:text-brand-400">
+                {{ selectedTicker().slice(0, 2) }}
+              </span>
+            }
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ selectedTicker() }}</p>
+            <p class="text-xs text-slate-400 truncate">{{ selectedItem().name }}</p>
+          </div>
+          @if (selectedItem().sector) {
+            <span class="text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0" [ngClass]="sectorClass(selectedItem().sector)">
+              {{ selectedItem().sector }}
+            </span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <!-- Watchlist -->
+          <button
+            class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-bold transition-all"
+            [ngClass]="inWatchlist(selectedTicker())
+              ? 'border-amber-400 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+              : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-brand-400 hover:text-brand-500'"
+            (click)="toggleWatchlist(selectedTicker())">
+            <i class="bi" [class.bi-star-fill]="inWatchlist(selectedTicker())" [class.bi-star]="!inWatchlist(selectedTicker())"></i>
+            {{ inWatchlist(selectedTicker()) ? 'Remover da Watchlist' : 'Adicionar à Watchlist' }}
+          </button>
+
+          <!-- Buy / Sell -->
+          <div class="grid gap-2" [ngClass]="holdsSelected() ? 'grid-cols-2' : 'grid-cols-1'">
+            <button
+              class="py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-sm font-bold text-white transition-colors flex items-center justify-center gap-1.5"
+              (click)="openTrade('buy')">
+              <i class="bi bi-bag-plus"></i>Comprar
+            </button>
+            @if (holdsSelected()) {
+              <button
+                class="py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-sm font-bold text-white transition-colors flex items-center justify-center gap-1.5"
+                (click)="openTrade('sell')">
+                <i class="bi bi-bag-dash"></i>Vender
+              </button>
+            }
+          </div>
+
+          @if (holdsSelected()) {
+            <p class="text-xs text-emerald-600 dark:text-emerald-400 text-center font-semibold">
+              <i class="bi bi-check-circle me-1"></i>Tens {{ selectedTicker() }} na carteira
+            </p>
+          }
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Trade modal -->
+<app-trade-modal
+  [open]="showTrade()"
+  [loading]="store.loading()"
+  [mode]="tradeMode()"
+  [balance]="store.summary().balance"
+  [initialTicker]="selectedTicker()"
+  (closeModal)="showTrade.set(false)"
+  (confirm)="onConfirmTrade($event)">
+</app-trade-modal>

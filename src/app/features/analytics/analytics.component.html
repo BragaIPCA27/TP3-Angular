@@ -1,0 +1,170 @@
+<div class="space-y-6">
+
+  <ds-page-header title="Analytics" subtitle="Análise detalhada da performance da sua carteira"></ds-page-header>
+
+  @if (!store.positionsView().length) {
+    <div class="ds-card flex flex-col items-center justify-center py-20 text-center">
+      <i class="bi bi-bar-chart-line text-4xl text-slate-200 dark:text-slate-600 mb-4"></i>
+      <p class="text-sm font-semibold text-slate-500">Sem dados para analisar</p>
+      <p class="text-xs text-slate-400 mt-1">Adicione posições à carteira para ver as análises.</p>
+    </div>
+  } @else {
+
+    <!-- Health metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      @for (card of healthCards(); track card.label) {
+        <ds-stat-card [data]="card"></ds-stat-card>
+      }
+    </div>
+
+    <!-- Summary KPIs -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="ds-card-flat px-4 py-3">
+        <p class="ds-label mb-1">Posições</p>
+        <p class="ds-value">{{ store.summary().positionsCount }}</p>
+      </div>
+      <div class="ds-card-flat px-4 py-3">
+        <p class="ds-label mb-1">Capital Investido</p>
+        <p class="text-xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">{{ store.summary().totalInvested | currencyFmt:0 }}</p>
+      </div>
+
+      <div class="ds-card-flat px-4 py-3">
+        <p class="ds-label mb-1">Melhor Posição</p>
+        @if (bestPerformer(); as bp) {
+          <div class="flex items-center gap-2 mt-1">
+            <app-ticker-logo [ticker]="bp.ticker" [size]="24"></app-ticker-logo>
+            <span class="text-base font-extrabold text-emerald-500">
+              {{ bp.ticker }}
+              <span class="text-xs ml-1">{{ bp.profitLossPercent >= 0 ? '+' : '' }}{{ bp.profitLossPercent | number:'1.2-2' }}%</span>
+            </span>
+          </div>
+        }
+      </div>
+
+      <div class="ds-card-flat px-4 py-3">
+        <p class="ds-label mb-1">Pior Posição</p>
+        @if (worstPerformer(); as wp) {
+          <div class="flex items-center gap-2 mt-1">
+            <app-ticker-logo [ticker]="wp.ticker" [size]="24"></app-ticker-logo>
+            <span class="text-base font-extrabold text-red-500">
+              {{ wp.ticker }}
+              <span class="text-xs ml-1">{{ wp.profitLossPercent >= 0 ? '+' : '' }}{{ wp.profitLossPercent | number:'1.2-2' }}%</span>
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Advanced metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      @for (card of advancedCards(); track card.label) {
+        <ds-stat-card [data]="card"></ds-stat-card>
+      }
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <div class="ds-card">
+        <div class="ds-card-header">
+          <h3 class="ds-section-title">Resultado por Posição</h3>
+          <p class="ds-section-subtitle">P&L acumulado por ativo</p>
+        </div>
+        <div class="p-2">
+          <apx-chart
+            [series]="plBarOptions().series"
+            [chart]="plBarOptions().chart"
+            [plotOptions]="plBarOptions().plotOptions"
+            [dataLabels]="plBarOptions().dataLabels"
+            [legend]="plBarOptions().legend"
+            [grid]="plBarOptions().grid"
+            [tooltip]="plBarOptions().tooltip"
+            [xaxis]="plBarOptions().xaxis"
+            [yaxis]="plBarOptions().yaxis"
+            [colors]="plBarOptions().colors">
+          </apx-chart>
+        </div>
+      </div>
+
+      <div class="ds-card">
+        <div class="ds-card-header">
+          <h3 class="ds-section-title">Variação do Dia</h3>
+          <p class="ds-section-subtitle">% de variação diária por ativo</p>
+        </div>
+        <div class="p-2">
+          <apx-chart
+            [series]="dailyBarOptions().series"
+            [chart]="dailyBarOptions().chart"
+            [plotOptions]="dailyBarOptions().plotOptions"
+            [dataLabels]="dailyBarOptions().dataLabels"
+            [legend]="dailyBarOptions().legend"
+            [grid]="dailyBarOptions().grid"
+            [tooltip]="dailyBarOptions().tooltip"
+            [xaxis]="dailyBarOptions().xaxis"
+            [yaxis]="dailyBarOptions().yaxis"
+            [colors]="dailyBarOptions().colors">
+          </apx-chart>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom row: allocation donut + positions table -->
+    <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
+
+      <app-allocation-donut [positions]="store.positionsView()"></app-allocation-donut>
+
+      <div class="ds-card">
+        <div class="ds-card-header">
+          <h3 class="ds-section-title">Detalhe por Posição</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[560px] text-xs">
+            <thead>
+              <tr class="ds-table-header-row">
+                <th class="ds-table-header-cell">Ticker</th>
+                <th class="ds-table-header-cell text-right">Val. Mercado</th>
+                <th class="ds-table-header-cell text-right">Resultado</th>
+                <th class="ds-table-header-cell text-right">Var. Dia</th>
+                <th class="ds-table-header-cell text-right">Peso</th>
+              </tr>
+            </thead>
+            <tbody class="ds-table-divider">
+              @for (pos of store.positionsView(); track pos.ticker) {
+                <tr class="ds-table-row">
+                  <td class="ds-table-cell">
+                    <div class="flex items-center gap-2">
+                      <app-ticker-logo [ticker]="pos.ticker" [size]="28"></app-ticker-logo>
+                      <span class="font-extrabold tracking-wider text-slate-800 dark:text-slate-100">{{ pos.ticker }}</span>
+                    </div>
+                  </td>
+                  <td class="ds-table-cell text-right tabular-nums text-slate-700 dark:text-slate-200">{{ pos.marketValue | currencyFmt:0 }}</td>
+                  <td class="ds-table-cell text-right tabular-nums font-bold"
+                    [class.text-emerald-500]="pos.profitLoss >= 0.5"
+                    [class.text-red-500]="pos.profitLoss < -0.5">
+                    {{ pos.profitLoss >= 0 ? '+' : '' }}{{ pos.profitLoss | currencyFmt:0 }}
+                    <span class="text-[10px] ml-1">({{ pos.profitLossPercent >= 0 ? '+' : '' }}{{ pos.profitLossPercent | number:'1.1-1' }}%)</span>
+                  </td>
+                  <td class="ds-table-cell text-right tabular-nums"
+                    [class.text-emerald-500]="pos.dailyChangePercent > 0.005"
+                    [class.text-red-500]="pos.dailyChangePercent < -0.005">
+                    {{ pos.dailyChangePercent >= 0 ? '+' : '' }}{{ pos.dailyChangePercent | number:'1.2-2' }}%
+                  </td>
+                  <td class="ds-table-cell text-right">
+                    <div class="flex items-center justify-end gap-2">
+                      <div class="w-16 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                        <div class="h-full rounded-full bg-brand-500 transition-all" [style.width.%]="pos.weight"></div>
+                      </div>
+                      <span class="text-slate-500 w-7 text-right">{{ pos.weight | number:'1.0-0' }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  }
+</div>

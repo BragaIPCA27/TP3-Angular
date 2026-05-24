@@ -1,0 +1,56 @@
+<!-- Market ticker bar -->
+<app-market-ticker [items]="tickerItems()"></app-market-ticker>
+
+<div class="space-y-5 pt-4">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="ds-page-title">Dashboard</h1>
+      <p class="ds-page-subtitle">Visão geral da carteira · cotações a cada 60s</p>
+    </div>
+    <span class="flex items-center gap-1.5 text-xs text-slate-400">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      Live
+    </span>
+  </div>
+
+  <!-- KPI row -->
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+    @for (card of kpiCards(); track card.label) {
+      <app-kpi-card [data]="card"></app-kpi-card>
+    }
+  </div>
+
+  <!-- Row 2: sector perf + market movers -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+
+    <app-sector-perf [sectors]="sectors()" [loading]="moversLoading()"></app-sector-perf>
+
+    <app-market-movers
+      [gainers]="movers().gainers"
+      [losers]="movers().losers"
+      [loading]="moversLoading()">
+    </app-market-movers>
+
+  </div>
+
+  <!-- Row 3: allocation + watchlist -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+
+    <app-allocation-donut [positions]="store.positionsView()"></app-allocation-donut>
+
+    <div class="h-[260px] overflow-hidden">
+      <app-watchlist-panel
+        [items]="store.watchlistItems()"
+        (addTicker)="store.addToWatchlist($event)"
+        (removeTicker)="store.removeFromWatchlist($event)">
+      </app-watchlist-panel>
+    </div>
+
+  </div>
+
+  <!-- Row 4: recent transactions (full width) -->
+  <app-recent-tx [items]="store.transactions().slice(0, 6)"></app-recent-tx>
+
+</div>

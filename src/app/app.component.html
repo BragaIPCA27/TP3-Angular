@@ -1,0 +1,238 @@
+<div class="admin-layout">
+
+  <!-- Left sidebar -->
+  <app-sidebar
+    [activePage]="activePage()"
+    [balance]="summary().balance"
+    [accountValue]="summary().accountValue"
+    (pageChange)="setPage($event)">
+  </app-sidebar>
+
+  <!-- Body -->
+  <div class="admin-body">
+
+    <app-navbar
+      [loading]="loading()"
+      [accountValue]="summary().accountValue"
+      (tickerSelect)="onSelectTicker($event)"
+      (refresh)="onRefresh()"
+      (reset)="onReset()">
+    </app-navbar>
+
+    <app-ticker-marquee [items]="marqueeItems()"></app-ticker-marquee>
+    <app-toast-notifications></app-toast-notifications>
+
+    <main class="admin-main">
+
+      <!-- ══════════════ DASHBOARD ══════════════ -->
+      <ng-container *ngIf="activePage() === 'dashboard'">
+
+        <!-- KPI row -->
+        <section class="mb-4">
+          <app-portfolio-summary [summary]="summary()" [loading]="loading()"></app-portfolio-summary>
+        </section>
+
+        <!-- Main row: chart (left) + allocation + quick actions (right) -->
+        <div class="dash-main-grid mb-4">
+
+          <div class="dash-chart-col">
+            <app-stock-chart
+              [symbol]="selectedTicker()"
+              [range]="chartRange()"
+              (rangeChange)="chartRange.set($event)">
+            </app-stock-chart>
+          </div>
+
+          <div class="dash-side-col">
+
+            <!-- Quick actions -->
+            <div class="dash-widget mb-3">
+              <div class="dash-widget-header">
+                <i class="bi bi-lightning-fill text-warning me-2"></i>
+                <span class="dash-widget-title">Ações Rápidas</span>
+              </div>
+              <div class="dash-widget-body">
+                <div class="qa-actions mb-2">
+                  <button class="qa-btn qa-btn--buy" type="button" (click)="openTrade('buy')">
+                    <i class="bi bi-bag-plus"></i> Comprar
+                  </button>
+                  <button class="qa-btn qa-btn--sell" type="button" (click)="openTrade('sell')">
+                    <i class="bi bi-bag-dash"></i> Vender
+                  </button>
+                </div>
+                <button class="qa-btn qa-btn--add" type="button" (click)="openAddModal()">
+                  <i class="bi bi-plus-circle"></i> Adicionar Posição Histórica
+                </button>
+              </div>
+            </div>
+
+            <!-- Allocation donut -->
+            <div class="dash-widget no-inner-header">
+              <div class="dash-widget-header">
+                <i class="bi bi-pie-chart-fill text-accent me-2"></i>
+                <span class="dash-widget-title">Alocação</span>
+              </div>
+              <app-allocation-chart [positions]="positions()"></app-allocation-chart>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Bottom row: recent transactions (left) + watchlist mini (right) -->
+        <div class="dash-bottom-grid">
+
+          <!-- Recent transactions -->
+          <div class="dash-widget">
+            <div class="dash-widget-header">
+              <i class="bi bi-clock-history me-2" style="color:var(--accent)"></i>
+              <span class="dash-widget-title">Transações Recentes</span>
+              <button class="dash-widget-link" type="button" (click)="setPage('transactions')">
+                Ver todas <i class="bi bi-arrow-right ms-1"></i>
+              </button>
+            </div>
+            <div class="dash-widget-body">
+              <div *ngIf="!transactions().length" class="dash-empty">
+                <i class="bi bi-receipt text-muted d-block mb-1"></i>
+                <span class="text-muted small">Nenhuma transação ainda.</span>
+              </div>
+              <div class="tx-mini-list">
+                <div class="tx-mini-row" *ngFor="let tx of transactions().slice(0, 6)">
+                  <span class="tx-mini-badge" [class.tx-buy]="tx.type === 'BUY'" [class.tx-sell]="tx.type === 'SELL'">
+                    {{ tx.type === 'BUY' ? 'COMPRA' : 'VENDA' }}
+                  </span>
+                  <span class="tx-mini-ticker">{{ tx.ticker }}</span>
+                  <span class="tx-mini-qty text-muted">{{ tx.quantity }}×</span>
+                  <span class="tx-mini-price">${{ tx.price | number:'1.2-2' }}</span>
+                  <span class="tx-mini-total" [class.tx-buy]="tx.type === 'BUY'" [class.tx-sell]="tx.type === 'SELL'">
+                    {{ tx.type === 'BUY' ? '-' : '+' }}${{ tx.total | number:'1.0-0' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Watchlist mini -->
+          <div class="dash-widget">
+            <div class="dash-widget-header">
+              <i class="bi bi-star-fill text-warning me-2"></i>
+              <span class="dash-widget-title">Watchlist</span>
+              <button class="dash-widget-link" type="button" (click)="setPage('watchlist')">
+                Gerir <i class="bi bi-arrow-right ms-1"></i>
+              </button>
+            </div>
+            <app-watchlist
+              [items]="watchlistQuotes()"
+              (addTicker)="onAddToWatchlist($event)"
+              (removeTicker)="onRemoveFromWatchlist($event)"
+              (buyTicker)="onBuyFromWatchlist($event)"
+              (chartTicker)="onSelectTicker($event)">
+            </app-watchlist>
+          </div>
+
+        </div>
+
+      </ng-container>
+
+      <!-- ══════════════ S&P 500 / MERCADO ══════════════ -->
+      <ng-container *ngIf="activePage() === 'sp500'">
+        <app-sp500></app-sp500>
+      </ng-container>
+
+      <!-- ══════════════ PORTFOLIO ══════════════ -->
+      <ng-container *ngIf="activePage() === 'portfolio'">
+
+        <div class="page-head mb-4">
+          <div>
+            <h1 class="page-title">Carteira de Ações</h1>
+            <p class="page-sub">Cotações em tempo real · atualização automática a cada 60 s</p>
+          </div>
+          <div class="page-actions">
+            <button class="page-btn page-btn--buy" type="button" (click)="openTrade('buy')">
+              <i class="bi bi-bag-plus"></i> Comprar
+            </button>
+            <button class="page-btn page-btn--sell" type="button" (click)="openTrade('sell')">
+              <i class="bi bi-bag-dash"></i> Vender
+            </button>
+            <button class="page-btn page-btn--add" type="button" (click)="openAddModal()">
+              <i class="bi bi-plus-circle"></i> Adicionar Posição
+            </button>
+          </div>
+        </div>
+
+        <app-portfolio-table
+          [rows]="positions()"
+          [loading]="loading()"
+          (removePosition)="onRemovePosition($event)"
+          (selectTicker)="onSelectTicker($event)">
+        </app-portfolio-table>
+
+      </ng-container>
+
+      <!-- ══════════════ TRANSAÇÕES ══════════════ -->
+      <ng-container *ngIf="activePage() === 'transactions'">
+
+        <div class="page-head mb-4">
+          <div>
+            <h1 class="page-title">Histórico de Transações</h1>
+            <p class="page-sub">Todas as operações de compra e venda realizadas</p>
+          </div>
+        </div>
+
+        <app-transaction-history [transactions]="transactions()"></app-transaction-history>
+
+      </ng-container>
+
+      <!-- ══════════════ WATCHLIST ══════════════ -->
+      <ng-container *ngIf="activePage() === 'watchlist'">
+
+        <div class="page-head mb-4">
+          <div>
+            <h1 class="page-title">Watchlist</h1>
+            <p class="page-sub">Acompanhe ações sem as ter em carteira · clique num ticker para ver o gráfico</p>
+          </div>
+        </div>
+
+        <div class="wl-page-grid">
+          <div class="wl-page-list">
+            <app-watchlist
+              [items]="watchlistQuotes()"
+              (addTicker)="onAddToWatchlist($event)"
+              (removeTicker)="onRemoveFromWatchlist($event)"
+              (buyTicker)="onBuyFromWatchlist($event)"
+              (chartTicker)="onSelectTicker($event)">
+            </app-watchlist>
+          </div>
+          <div class="wl-page-chart">
+            <app-stock-chart
+              [symbol]="selectedTicker()"
+              [range]="chartRange()"
+              (rangeChange)="chartRange.set($event)">
+            </app-stock-chart>
+          </div>
+        </div>
+
+      </ng-container>
+
+    </main>
+  </div>
+
+</div>
+
+<!-- Modals -->
+<app-buy-stock-modal
+  [open]="showAddModal()"
+  [loading]="loading()"
+  (close)="closeAddModal()"
+  (confirm)="confirmAdd($event)">
+</app-buy-stock-modal>
+
+<app-quick-trade-modal
+  [open]="showTradeModal()"
+  [loading]="loading()"
+  [balance]="summary().balance"
+  [positions]="positions()"
+  [initialMode]="tradeMode()"
+  (close)="closeTradeModal()"
+  (confirmBuy)="onConfirmBuy($event)"
+  (confirmSell)="onConfirmSell($event)">
+</app-quick-trade-modal>
